@@ -7,11 +7,16 @@ targetCompatibility = 1.6
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 dependencies {
-    compile project(':core')
+	if(projectDir.getParentFile().equals(rootDir)) {
+    	compile project(':core')
+   	 	testCompile project(path: ':core', configuration: 'demo')
+   	 } else {
+    	compile project(':'+projectDir.getParentFile().name+':core')
+   	 	testCompile project(path: ':'+projectDir.getParentFile().name+':core', configuration: 'demo')
+   	 }
     compile "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
     compile "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     
-    testCompile project(path: ':core', configuration: 'demo')
     testCompile "net.spookygames.gdx:gdx-nativefilechooser-desktop:1.0.0"
 }
 

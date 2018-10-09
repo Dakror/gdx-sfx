@@ -33,7 +33,12 @@ targetCompatibility = 1.6
 project.archivesBaseName = "$libName-${project.name}"
 
 dependencies {
-    compile project(':core')
+	if(projectDir.getParentFile().equals(rootDir)) {
+    	compile project(':core')
+   	 } else {
+    	compile project(':'+projectDir.getParentFile().name+':core')
+   	 }
+
     compile "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
 }
 
