@@ -33,120 +33,111 @@ import net.spookygames.gdx.sfx.SfxSound;
 
 public class SpatializedSoundPlayer<T> {
 
-    private final Pool<SpatializedSound<T>> pool = new Pool<SpatializedSound<T>>() {
-        @Override
-        protected SpatializedSound<T> newObject() {
-            return new SpatializedSound<T>();
-        };
-    };
+	protected final Pool<SpatializedSound<T>> pool = new Pool<SpatializedSound<T>>() {
+		@Override
+		protected SpatializedSound<T> newObject() {
+			return SpatializedSoundPlayer.this.newObject();
+		};
+	};
 
-    private final LongMap<SpatializedSound<T>> sounds = new LongMap<SpatializedSound<T>>();
+	protected final LongMap<SpatializedSound<T>> sounds = new LongMap<SpatializedSound<T>>();
 
-    private Spatializer<T> spatializer;
+	protected Spatializer<T> spatializer;
 
-    private float volume = 1f;
+	protected float volume = 1f;
 
-    private float fadeTime = 0f;
+	public Spatializer<T> getSpatializer() {
+		return spatializer;
+	}
 
-    public Spatializer<T> getSpatializer() {
-        return spatializer;
-    }
+	public void setSpatializer(Spatializer<T> spatializer) {
+		this.spatializer = spatializer;
+	}
 
-    public void setSpatializer(Spatializer<T> spatializer) {
-        this.spatializer = spatializer;
-    }
+	public float getVolume() {
+		return volume;
+	}
 
-    public float getVolume() {
-        return volume;
-    }
+	public void setVolume(float volume) {
+		this.volume = volume;
+	}
 
-    public void setVolume(float volume) {
-        this.volume = volume;
-    }
+	public long play(T position, SfxSound sound) {
+		return play(position, sound, 1f, false);
+	}
 
-    public void setFadeTime(float fadeTime) {
-        this.fadeTime = fadeTime;
-    }
+	public long play(T position, SfxSound sound, float pitch, boolean looping) {
+		SpatializedSound<T> instance = pool.obtain();
 
-    public float getFadeTime() {
-        return fadeTime;
-    }
+		float duration = sound.getDuration();
 
-    public long play(T position, SfxSound sound) {
-        return play(position, sound, 1f, false);
-    }
+		Spatializer<T> spatializer = this.spatializer;
 
-    public long play(T position, SfxSound sound, float pitch, boolean looping) {
-        return play(position, sound, pitch, looping, false);
-    }
+		long id = instance.initialize(sound, duration, position, 0f, pitch, 0f);
 
-    public long play(T position, SfxSound sound, float pitch, boolean looping, boolean fadeIn) {
-        SpatializedSound<T> instance = pool.obtain();
+		if (id == -1) {
+			pool.free(instance);
+			Gdx.app.error("gdx-sfx", "Couldn't play sound " + sound);
+		} else {
+			instance.setLooping(looping);
+			spatializer.spatialize(instance, this.volume);
 
-        float duration = sound.getDuration();
+			sounds.put(id, instance);
+		}
 
-        Spatializer<T> spatializer = this.spatializer;
+		return id;
+	}
 
-        long id = instance.initialize(sound, duration, position, 0f, pitch, 0f, fadeTime, fadeIn);
+	public void update(float delta) {
+		Spatializer<T> spatializer = this.spatializer;
 
-        if (id == -1) {
-            pool.free(instance);
-            Gdx.app.error("gdx-sfx", "Couldn't play sound " + sound);
-        } else {
-            instance.setLooping(looping);
-            spatializer.spatialize(instance, this.volume);
+		Iterator<SpatializedSound<T>> iterator = sounds.values();
+		while (iterator.hasNext()) {
+			SpatializedSound<T> instance = iterator.next();
 
-            sounds.put(id, instance);
-        }
+			if (instance.update(delta)) {
+				iterator.remove();
+				pool.free(instance);
+			} else {
+				spatializer.spatialize(instance, this.volume);
+			}
+		}
+	}
 
-        return id;
-    }
+	public void stop() {
+		Pool<SpatializedSound<T>> pool = this.pool;
+		LongMap<SpatializedSound<T>> sounds = this.sounds;
+		for (SpatializedSound<T> object : sounds.values())
+			pool.free(object);
+		sounds.clear();
+	}
 
-    public void update(float delta) {
-        Spatializer<T> spatializer = this.spatializer;
+	public void stop(long id) {
+		SpatializedSound<T> sound = sounds.get(id);
 
-        Iterator<SpatializedSound<T>> iterator = sounds.values();
-        while (iterator.hasNext()) {
-            SpatializedSound<T> instance = iterator.next();
+		if (sound != null) {
+			sound.stop();
+			pool.free(sound);
+		}
+	}
 
-            if (instance.update(delta)) {
-                iterator.remove();
-                pool.free(instance);
-            } else if (!instance.isFading()) {
-                spatializer.spatialize(instance, this.volume);
-            }
-        }
-    }
+	public void pause(long id) {
+		SpatializedSound<T> sound = sounds.get(id);
 
-    public void stop() {
-        Pool<SpatializedSound<T>> pool = this.pool;
-        LongMap<SpatializedSound<T>> sounds = this.sounds;
-        for (SpatializedSound<T> object : sounds.values())
-            pool.free(object);
-        sounds.clear();
-    }
+		if (sound != null) {
+			sound.pause();
+		}
+	}
 
-    public void stop(long id) {
-        SpatializedSound<T> sound = sounds.get(id);
+	public void resume(long id) {
+		SpatializedSound<T> sound = sounds.get(id);
 
-        if (sound != null) {
-            sound.stop();
-        }
-    }
+		if (sound != null) {
+			sound.resume();
+		}
+	}
 
-    public void pause(long id) {
-        SpatializedSound<T> sound = sounds.get(id);
-
-        if (sound != null) {
-            sound.pause();
-        }
-    }
-
-    public void resume(long id) {
-        SpatializedSound<T> sound = sounds.get(id);
-
-        if (sound != null) {
-            sound.resume();
-        }
-    }
+	protected SpatializedSound<T> newObject() {
+		return new SpatializedSound<T>();
+	}
 }

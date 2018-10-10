@@ -28,228 +28,148 @@ import com.badlogic.gdx.utils.Pool.Poolable;
 
 public class SpatializedSound<T> implements Poolable {
 
-    private Sound sound;
-    private long id;
-    private float duration;
-    private T position;
-    private float volume;
-    private float pitch;
-    private float pan;
-    private float fadeTime;
+	private Sound sound;
+	private long id;
+	private float duration;
+	private T position;
+	private float volume;
+	private float pitch;
+	private float pan;
 
-    private float elapsed;
+	protected float elapsed;
 
-    private boolean running = false;
-    private boolean looping = false;
+	private boolean running = false;
+	private boolean looping = false;
 
-    private float fadeProgress = -1;
-    private boolean fadeIn;
-    private float realVolume;
+	@Override
+	public void reset() {
+		if (sound != null)
+			sound.stop(id);
+		sound = null;
 
-    private boolean stop = false;
+		id = -1L;
 
-    @Override
-    public void reset() {
-        if (sound != null)
-            sound.stop(id);
-        sound = null;
+		duration = -1f;
 
-        id = -1L;
+		position = null;
 
-        duration = -1f;
+		volume = 1f;
+		pitch = 1f;
+		pan = 0f;
 
-        position = null;
+		elapsed = Float.MAX_VALUE;
 
-        fadeTime = 0;
-        fadeProgress = -1;
-        volume = 1f;
-        pitch = 1f;
-        pan = 0f;
+		running = false;
+		looping = false;
+	}
 
-        elapsed = Float.MAX_VALUE;
+	public long initialize(Sound sound, float duration, T position, float volume, float pitch, float panning) {
+		this.sound = sound;
+		this.duration = duration;
 
-        stop = false;
-        running = false;
-        looping = false;
-    }
+		this.position = position;
 
-    public long initialize(Sound sound, float duration, T position, float volume, float pitch, float panning, float fadeTime, boolean fadeIn) {
-        this.sound = sound;
-        this.duration = duration;
+		this.elapsed = 0f;
 
-        this.position = position;
+		running = true;
+		return this.id = sound.play(this.volume = volume, this.pitch = pitch, this.pan = panning);
+	}
 
-        this.elapsed = 0f;
+	public long getId() {
+		return id;
+	}
 
-        running = true;
-        this.fadeTime = fadeTime;
-        this.volume = volume;
-        this.id = sound.play(fadeIn ? 0 : volume, this.pitch = pitch, this.pan = panning);
-        if (fadeIn) {
-            fadeIn();
-        }
+	public Sound getSound() {
+		return sound;
+	}
 
-        return this.id;
-    }
+	public float getDuration() {
+		return this.duration;
+	}
 
-    public long getId() {
-        return id;
-    }
+	public T getPosition() {
+		return position;
+	}
 
-    public Sound getSound() {
-        return sound;
-    }
+	public void setPosition(T position) {
+		this.position = position;
+	}
 
-    public float getDuration() {
-        return this.duration;
-    }
+	public float getPitch() {
+		return this.pitch;
+	}
 
-    public T getPosition() {
-        return position;
-    }
+	public void setPitch(float pitch) {
+		if (this.pitch != pitch) {
+			this.pitch = pitch;
+			sound.setPitch(id, pitch);
+		}
+	}
 
-    public void setPosition(T position) {
-        this.position = position;
-    }
+	public float getVolume() {
+		return this.volume;
+	}
 
-    public float getPitch() {
-        return this.pitch;
-    }
+	public void setVolume(float volume) {
+		if (this.volume != volume) {
+			this.volume = volume;
+			sound.setVolume(id, volume);
+		}
+	}
 
-    public void setPitch(float pitch) {
-        if (this.pitch != pitch) {
-            this.pitch = pitch;
-            sound.setPitch(id, pitch);
-        }
-    }
+	public float getPan() {
+		return this.pan;
+	}
 
-    public float getVolume() {
-        return this.volume;
-    }
+	public void setPan(float pan, float volume) {
+		if (this.pan != pan || this.volume != volume) {
+			this.pan = pan;
+			this.volume = volume;
+			sound.setPan(id, pan, volume);
+		}
+	}
 
-    public void setVolume(float volume) {
-        // setup correct target volume we got from spatialize
-        if (elapsed == 0 && fadeProgress > -1) {
-            realVolume = volume;
-        } else if (this.volume != volume) {
-            this.volume = volume;
-            sound.setVolume(id, volume);
-        }
-    }
+	public boolean isLooping() {
+		return looping;
+	}
 
-    public float getPan() {
-        return this.pan;
-    }
+	public void setLooping(boolean looping) {
+		if (this.looping != looping) {
+			this.looping = looping;
+			sound.setLooping(id, looping);
+		}
+	}
 
-    public void setPan(float pan, float volume) {
-        // setup correct target volume we got from spatialize
-        if (elapsed == 0 && fadeProgress > -1) {
-            realVolume = volume;
-            this.pan = pan;
-            sound.setPan(id, pan, 0);
-        } else if (this.pan != pan || this.volume != volume) {
-            this.pan = pan;
-            this.volume = volume;
-            sound.setPan(id, pan, volume);
-        }
-    }
+	public boolean update(float deltaTime) {
+		if (running) {
+			elapsed += deltaTime;
+		}
 
-    public boolean isLooping() {
-        return looping;
-    }
+		if (elapsed >= duration) {
+			elapsed -= duration;
 
-    public void setLooping(boolean looping) {
-        if (this.looping != looping) {
-            this.looping = looping;
-            sound.setLooping(id, looping);
-        }
-    }
+			if (looping) {
+				return false;
+			} else {
+				running = false;
+				return true;
+			}
+		}
 
-    public boolean isFading() {
-        return fadeProgress > -1;
-    }
+		return false;
+	}
 
-    public boolean update(float deltaTime) {
-        if (sound == null) {
-            return true;
-        }
+	public void stop() {
+		reset();
+	}
 
-        if (running) {
-            elapsed += deltaTime;
-        }
+	public void resume() {
+		sound.resume(id);
+		running = true;
+	}
 
-        if (fadeTime > 0 && fadeProgress > -1) {
-            float progress = fadeProgress / fadeTime;
-            if (!fadeIn) progress = 1 - progress;
-            setVolume(progress * realVolume);
-
-            fadeProgress += deltaTime;
-
-            if (fadeProgress >= fadeTime) {
-                fadeProgress = -1;
-                setVolume(fadeIn ? realVolume : 0);
-                
-                if (!fadeIn) {
-                    if (stop) {
-                        reset();
-                    } else {
-                        sound.pause(id);
-                        running = false;
-                    }
-                }
-            }
-        }
-
-        if (elapsed >= duration) {
-            elapsed -= duration;
-
-            if (looping) {
-                return false;
-            } else {
-                running = false;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public void stop() {
-        if (fadeTime > 0) {
-            stop = true;
-            fadeOut();
-        } else {
-            reset();
-        }
-    }
-
-    public void resume() {
-        sound.resume(id);
-        running = true;
-        if (fadeTime > 0) {
-            fadeIn();
-        }
-    }
-
-    public void pause() {
-        if (fadeTime > 0) {
-            fadeOut();
-        } else {
-            sound.pause(id);
-            running = false;
-        }
-    }
-
-    public void fadeIn() {
-        realVolume = volume;
-        setVolume(0);
-        fadeIn = true;
-        fadeProgress = 0;
-    }
-
-    public void fadeOut() {
-        realVolume = volume;
-        fadeIn = false;
-        fadeProgress = 0;
-    }
+	public void pause() {
+		sound.pause(id);
+		running = false;
+	}
 }
