@@ -22,20 +22,23 @@ public class FadingSpatializedSoundPlayer<T> extends SpatializedSoundPlayer<T> {
 		return new FadingSpatializedSound<T>();
 	}
 
-	public long play(T position, SfxSound sound, float pitch, boolean looping, boolean fadeIn) {
-		FadingSpatializedSound<T> instance = (FadingSpatializedSound<T>) pool.obtain();
+	public long play(T position, SfxSound sound, float pitch, boolean looping,
+			boolean fadeIn) {
+		FadingSpatializedSound<T> instance = (FadingSpatializedSound<T>) pool
+				.obtain();
 
 		float duration = sound.getDuration();
 
 		Spatializer<T> spatializer = this.spatializer;
 
-		long id = instance.initialize(sound, looping, duration, position, 0f, pitch, 0f, fadeTime, fadeIn);
+		long id = instance.initialize(sound, looping, duration, position, 0f,
+				pitch, 0f, fadeTime, fadeIn);
 
 		if (id == -1) {
 			pool.free(instance);
 			Gdx.app.error("gdx-sfx", "Couldn't play sound " + sound);
 		} else {
-			instance.setLooping(true);
+			instance.setLooping(looping);
 			spatializer.spatialize(instance, this.volume);
 
 			sounds.put(id, instance);
@@ -44,6 +47,7 @@ public class FadingSpatializedSoundPlayer<T> extends SpatializedSoundPlayer<T> {
 		return id;
 	}
 
+	@Override
 	public void update(float delta) {
 		Spatializer<T> spatializer = this.spatializer;
 
@@ -60,6 +64,7 @@ public class FadingSpatializedSoundPlayer<T> extends SpatializedSoundPlayer<T> {
 		}
 	}
 
+	@Override
 	public void stop(long id) {
 		SpatializedSound<T> sound = sounds.get(id);
 
