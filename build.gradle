@@ -1,9 +1,9 @@
 
 buildscript {
     repositories {
+        google()
         mavenCentral()
         jcenter()
-        google()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.2.1'
@@ -22,7 +22,8 @@ allprojects {
         libName = 'gdx-sfx'
     }
 
-    repositories {
+    repositories {      
+        google()
         mavenCentral()
         maven { url "http://dl.bintray.com/spookygames/oss" }
     }
