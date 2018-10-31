@@ -20,8 +20,11 @@ public class FadingSpatializedSound<T> extends SpatializedSound<T> {
 		realVolume = 0;
 	}
 
-	public long initialize(Sound sound, boolean looping, float duration, T position, float volume, float pitch, float panning, float fadeTime, boolean fadeIn) {
-		long id = super.initialize(sound, looping, duration, position, volume, pitch, panning);
+	public long initialize(Sound sound, boolean looping, float duration,
+			T position, float volume, float pitch, float panning,
+			float fadeTime, boolean fadeIn) {
+		long id = super.initialize(sound, looping, duration, position, volume,
+				pitch, panning);
 
 		this.fadeTime = fadeTime;
 
@@ -36,6 +39,7 @@ public class FadingSpatializedSound<T> extends SpatializedSound<T> {
 		return fadeProgress > -1;
 	}
 
+	@Override
 	public void setVolume(float volume) {
 		// setup correct target volume we got from spatialize
 		if (elapsed == 0 && fadeProgress > -1) {
@@ -45,6 +49,7 @@ public class FadingSpatializedSound<T> extends SpatializedSound<T> {
 		}
 	}
 
+	@Override
 	public void setPan(float pan, float volume) {
 		// setup correct target volume we got from spatialize
 		if (elapsed == 0 && fadeProgress > -1) {
@@ -86,6 +91,7 @@ public class FadingSpatializedSound<T> extends SpatializedSound<T> {
 		return super.update(deltaTime);
 	}
 
+	@Override
 	public void stop() {
 		if (fadeTime > 0) {
 			stop = true;
@@ -95,31 +101,39 @@ public class FadingSpatializedSound<T> extends SpatializedSound<T> {
 		}
 	}
 
+	@Override
 	public void resume() {
-		super.resume();
-		if (fadeTime > 0) {
-			fadeIn();
+		if (getSound() != null) {
+			super.resume();
+			if (fadeTime > 0) {
+				fadeIn();
+			}
 		}
 	}
 
+	@Override
 	public void pause() {
 		if (fadeTime > 0) {
 			fadeOut();
-		} else {
+		} else if (getSound() != null) {
 			super.pause();
 		}
 	}
 
 	public void fadeIn() {
-		realVolume = getVolume();
-		setVolume(0);
-		fadeIn = true;
-		fadeProgress = 0;
+		if (fadeTime > 0) {
+			realVolume = getVolume();
+			setVolume(0);
+			fadeIn = true;
+			fadeProgress = 0;
+		}
 	}
 
 	public void fadeOut() {
-		realVolume = getVolume();
-		fadeIn = false;
-		fadeProgress = 0;
+		if (fadeTime > 0) {
+			realVolume = getVolume();
+			fadeIn = false;
+			fadeProgress = 0;
+		}
 	}
 }
